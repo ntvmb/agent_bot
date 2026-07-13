@@ -1,0 +1,19 @@
+[project]
+name = "agent-bot"
+version = "0.0.1"
+description = "A Discord bot for managing honeypots."
+authors = [
+    {name = "Nicole Lily",email = "61354864+ntvmb@users.noreply.github.com"}
+]
+license = {file = "LICENSE"}
+requires-python = ">=3.10,<3.15"
+dependencies = [
+    "py-cord (>=2.8.0,<3.0.0)",
+    "tendo (>=0.3.0,<0.4.0)",
+    "audioop-lts (>=0.2.2,<0.3.0) ; python_version >= '3.13'"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

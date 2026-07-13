@@ -1,0 +1,8 @@
+**/__pycache__
+*.txt
+*.log
+*.json
+src/*.egg-info
+core.*
+*.code-workspace
+.vscode
