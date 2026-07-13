@@ -5,4 +5,5 @@
 src/*.egg-info
 core.*
 *.code-workspace
+*.sh
 .vscode
