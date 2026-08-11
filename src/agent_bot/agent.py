@@ -75,7 +75,11 @@ async def on_message(message: discord.Message):
     if message.author.id == bot.user.id:
         return
     honeypot = server_vars.get("honeypot", message.guild.id)
-    if honeypot is not None and message.channel.id == honeypot:
+    if (
+        honeypot is not None
+        and message.channel.id == honeypot
+        and not message.author.bot
+    ):
         try:
             await message.author.ban(
                 delete_message_seconds=86400, reason="Fell for the honeypot"
