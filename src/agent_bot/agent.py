@@ -1,7 +1,9 @@
 import logging
 import asyncio
 import json
+import datetime
 import discord
+from io import StringIO
 from discord import (
     option,
     default_permissions,
@@ -21,7 +23,7 @@ _log = logging.getLogger(__name__)
 @bot.event
 async def on_ready():
     watching = discord.Activity(
-        type=discord.ActivityType.listening, name="to the honeypots"
+        type=discord.ActivityType.listening, name="the honeypots"
     )
     await bot.change_presence(activity=watching, status=discord.Status.dnd)
     _log.info(f"Logged in as {bot.user}.")
@@ -129,3 +131,82 @@ async def set_honeypot(
             "I cannot do as told because I do not have the correct permissions.\n"
             "Make sure I have the `Send Messages` and `Ban Members` permissions."
         )
+
+
+@bot.slash_command(description="Get user info")
+async def userinfo(
+    ctx: discord.ApplicationContext,
+    user: Option(discord.Member, description="User's mention or ID"),  # type: ignore
+):
+    await ctx.defer()
+    user_in_guild = False
+    user_joined_guild = None
+    if not isinstance(user, (discord.User, discord.Member)):
+        try:
+            user = await bot.fetch_user(int(user))
+        except discord.errors.NotFound:
+            await ctx.respond("User does not exist.")
+            return
+        except TypeError:
+            await ctx.respond("Not a valid ID.")
+            return
+    if ctx.guild is not None:
+        member = ctx.guild.get_member(user.id)
+        if member is not None:
+            user = member
+            if member.joined_at is not None:
+                user_joined_guild = int(member.joined_at.timestamp())
+                roles = member.roles
+                user_in_guild = True
+    embed = discord.Embed(
+        title=str(user),
+        thumbnail=user.display_avatar.url,
+        description=f"{user.mention}"
+    )
+    embed = embed.add_field(
+        name="Information",
+        value=(
+            f"**Bot**: {user.bot}\n"
+            f"**ID**: `{user.id}`"
+        )
+    )
+    user_joined_discord = int(user.created_at.timestamp())
+    joined_field = StringIO()
+    joined_field.write(f"**Discord**: <t:{user_joined_discord}:F> (<t:{user_joined_discord}:R>)\n")
+    if user_in_guild:
+        joined_field.write(f"**Guild**: <t:{user_joined_guild}:F> (<t:{user_joined_guild}:R>)")
+    embed = embed.add_field(
+        name="Joined",
+        value=joined_field.getvalue(),
+    )
+    if user_in_guild:
+        embed = embed.add_field(
+            name="Guild-Specific",
+            value=f"Roles: {', '.join(role.mention for role in roles)}",
+            inline=False
+        )
+    await ctx.respond(embed=embed)
+
+
+@bot.slash_command(description="Ban a member by mention or ID")
+@default_permissions(ban_members=True)
+@guild_only()
+async def ban(
+    ctx: discord.ApplicationContext,
+    user: Option(discord.Member, description="User's mention or ID"),  # type: ignore
+    reason: Option(str, description="Reason for ban", required=False),  # type: ignore
+):
+    await ctx.defer(ephemeral=True)
+    ban_string = (
+        f"Admin: {ctx.author}\n"
+        f"Reason: {reason}\n"
+        f"Timestamp: {datetime.datetime.now(datetime.timezone.utc).strftime("%a %Y/%m/%d, %T %Z")}"
+    )
+    if not isinstance(user, (discord.User, discord.Member)):
+        user = await ctx.guild.fetch_member(int(user))
+    try:
+        await ctx.guild.ban(user, delete_message_seconds=86400, reason=ban_string)
+    except discord.errors.Forbidden:
+        await ctx.respond("I am unable to ban this user.")
+        return
+    await ctx.respond(f"Successfully banned {user}.")
